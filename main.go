@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/RIscRIpt/rrl/rhs/courier"
+	"github.com/RIscRIpt/rrl/go-librlcom"
 )
 
 const (
@@ -66,15 +66,15 @@ func handleClient(conn *net.TCPConn) {
 
 	log.Printf("Client connected from %+v\n", conn.RemoteAddr())
 
-	c := courier.New(conn)
+	c := librlcom.NewCourier(conn)
 
 loop:
 	for {
 		msg, err := c.Receive()
 		switch err {
 		case nil:
-		case courier.ErrUnknownMessage:
-			header := msg.(courier.Header)
+		case librlcom.ErrUnknownMessage:
+			header := msg.(*librlcom.Header)
 			log.Println(err, header)
 			break loop
 		case io.EOF:
@@ -85,15 +85,15 @@ loop:
 		}
 
 		switch m := msg.(type) {
-		case courier.OK:
+		case *librlcom.OK:
 			fmt.Println("OK")
-		case courier.Version:
+		case *librlcom.Version:
 			fmt.Printf("Version: %d\n", m.Value)
-		case courier.Authorization:
+		case *librlcom.Authorization:
 			fmt.Printf("Token: %+v\n", m.Token)
-		case courier.LinkLibrary:
-			fmt.Printf("Library: %+v\n", m.Name())
-			runSvcLinker(conn, m.Name())
+		case *librlcom.LinkLibrary:
+			fmt.Printf("Library: %+v\n", m.String.String())
+			runSvcLinker(conn, m.String.String())
 			conn.Close()
 			break loop
 		}

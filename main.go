@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -18,7 +19,12 @@ const (
 )
 
 var (
-	flagListenAddress = flag.String("addr", ":40545", "listen address")
+	flagListenAddress      = flag.String("addr", ":40545", "listen address")
+	flagSymbolResolverPath = flag.String("res-addr", "/var/run/svcsymres.sock", "path to unix socket of resolver service (symbol to library)")
+)
+
+var (
+	ErrSvcLinkerNotExited = errors.New("svclinker has not exited")
 )
 
 func fatalError(when string, what error) {
@@ -93,9 +99,11 @@ loop:
 			fmt.Printf("Token: %+v\n", m.Token)
 		case *librlcom.LinkLibrary:
 			fmt.Printf("Library: %+v\n", m.String.String())
-			runSvcLinker(conn, m.String.String())
-			conn.Close()
-			break loop
+			err := runSvcLinker(conn, m.String.String())
+			if err != nil {
+				conn.Close()
+				break loop
+			}
 		}
 	}
 
@@ -104,18 +112,34 @@ loop:
 	conn.Close()
 }
 
-func runSvcLinker(conn *net.TCPConn, library string) {
+func runSvcLinker(conn *net.TCPConn, library string) error {
 	connFile, err := conn.File()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	procAttr := os.ProcAttr{
 		Dir:   "/home/richard/mega/src/C++/rrl/svclinker/build/",
 		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr, connFile},
 	}
-	proc, err := os.StartProcess("/home/richard/mega/src/C++/rrl/svclinker/build/svclinker", []string{"svclinker", "3", library}, &procAttr)
+	proc, err := os.StartProcess(
+		"/home/richard/mega/src/C++/rrl/svclinker/build/svclinker",
+		[]string{
+			"svclinker",
+			"3",
+			*flagSymbolResolverPath,
+			library,
+		},
+		&procAttr,
+	)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	proc.Release()
+	state, err := proc.Wait()
+	if err != nil {
+		return err
+	}
+	if !state.Exited() {
+		return ErrSvcLinkerNotExited
+	}
+	return nil
 }

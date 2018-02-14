@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/RIscRIpt/rrl/go-librlcom"
+	"github.com/rrlinker/go-librlcom"
 )
 
 const (

@@ -26,7 +26,7 @@ var (
 )
 
 var (
-	ErrSvcLinkerNotExited = errors.New("svclinker has not exited")
+	errSvcLinkerNotExited = errors.New("svclinker has not exited")
 )
 
 func fatalError(when string, what error) {
@@ -141,7 +141,7 @@ func runSvcLinker(conn *net.TCPConn, library string) error {
 		return err
 	}
 	if !state.Exited() {
-		return ErrSvcLinkerNotExited
+		return errSvcLinkerNotExited
 	}
 	return nil
 }

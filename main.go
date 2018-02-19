@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/rrlinker/go-librlcom"
@@ -19,6 +20,7 @@ const (
 )
 
 var (
+	flagLinkerPath         = flag.String("lpath", "svclinker", "path to linker service")
 	flagListenAddress      = flag.String("addr", ":40545", "listen address")
 	flagSymbolResolverPath = flag.String("res-addr", "/var/run/svcsymres.sock", "path to unix socket of resolver service (symbol to library)")
 )
@@ -118,11 +120,11 @@ func runSvcLinker(conn *net.TCPConn, library string) error {
 		return err
 	}
 	procAttr := os.ProcAttr{
-		Dir:   "/home/richard/mega/src/C++/rrl/svclinker/build/",
+		Dir:   filepath.Base(*flagLinkerPath),
 		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr, connFile},
 	}
 	proc, err := os.StartProcess(
-		"/home/richard/mega/src/C++/rrl/svclinker/build/svclinker",
+		*flagLinkerPath,
 		[]string{
 			"svclinker",
 			"3",
